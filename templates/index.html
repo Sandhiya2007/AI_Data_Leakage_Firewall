@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Data Leakage Firewall — Enterprise Security Dashboard</title>
+  <meta name="description" content="AI Data Leakage Firewall web interface and real-time security dashboard for IBM Z / LinuxONE.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-body">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav" role="banner">
+    <div class="nav-container">
+      <div class="nav-branding">
+        <div class="brand-shield" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <h1 class="brand-title">AI Data Leakage Firewall</h1>
+          <p class="brand-subtitle">Enterprise AI Security and Data Protection</p>
+        </div>
+      </div>
+
+      <div class="nav-controls">
+        <div class="env-badge" title="Target Deployment Environment">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+          <span>IBM Z / LinuxONE Prototype</span>
+        </div>
+
+        <div id="connectionStatus" class="status-indicator status-connecting" role="status" aria-live="polite" title="Live connection status to Flask backend">
+          <span class="status-dot"></span>
+          <span id="connectionText" class="status-text">Connecting...</span>
+        </div>
+
+        <button id="refreshDashboardBtn" class="btn btn-secondary btn-icon" type="button" aria-label="Refresh Dashboard Data">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M23 4v6h-6"/>
+            <path d="M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Live Status Notification Banner -->
+  <div id="feedbackBanner" class="feedback-banner" role="alert" aria-live="assertive" hidden>
+    <div class="banner-content">
+      <span id="feedbackIcon" class="banner-icon" aria-hidden="true"></span>
+      <span id="feedbackMessage" class="banner-message"></span>
+    </div>
+    <button id="feedbackDismissBtn" class="banner-dismiss" type="button" aria-label="Dismiss notification">&times;</button>
+  </div>
+
+  <!-- Main Content Layout -->
+  <main class="dashboard-main" role="main">
+    <div class="content-container">
+
+      <!-- Section: Summary Statistics -->
+      <section class="metrics-grid" aria-label="Firewall Statistics Overview">
+        <article class="metric-card metric-neutral">
+          <div class="metric-header">
+            <span class="metric-label">Total Requests</span>
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+            </span>
+          </div>
+          <div class="metric-value" id="statTotalRequests">—</div>
+          <p class="metric-caption">Audit events logged</p>
+        </article>
+
+        <article class="metric-card metric-allow">
+          <div class="metric-header">
+            <span class="metric-label">Allowed Requests</span>
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+          </div>
+          <div class="metric-value" id="statAllowedRequests">—</div>
+          <p class="metric-caption">Passed policy evaluation</p>
+        </article>
+
+        <article class="metric-card metric-mask">
+          <div class="metric-header">
+            <span class="metric-label">Masked Requests</span>
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            </span>
+          </div>
+          <div class="metric-value" id="statMaskedRequests">—</div>
+          <p class="metric-caption">Sanitized sensitive entities</p>
+        </article>
+
+        <article class="metric-card metric-block">
+          <div class="metric-header">
+            <span class="metric-label">Blocked Requests</span>
+            <span class="metric-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </span>
+          </div>
+          <div class="metric-value" id="statBlockedRequests">—</div>
+          <p class="metric-caption">Denied by security policy</p>
+        </article>
+      </section>
+
+      <!-- Two-Column Primary Interaction Area -->
+      <div class="dashboard-columns">
+
+        <!-- Column 1: Prompt Submission & Role Controls -->
+        <section class="panel panel-interactive" aria-labelledby="promptPanelTitle">
+          <div class="panel-header">
+            <h2 id="promptPanelTitle" class="panel-title">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="title-icon" aria-hidden="true">
+                <polyline points="4 17 10 11 4 5"/>
+                <line x1="12" y1="19" x2="20" y2="19"/>
+              </svg>
+              Test a Secure AI Request
+            </h2>
+            <span class="badge badge-demo">Simulated Demo Identity</span>
+          </div>
+
+          <div class="demo-notice" role="note">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>This dashboard queries synthetic demo enterprise data. Role selection simulates identity tokens evaluated by the firewall policy engine.</span>
+          </div>
+
+          <form id="promptForm" class="prompt-form" novalidate>
+            <!-- User Role Selector -->
+            <div class="form-group">
+              <label for="roleSelector" class="form-label">
+                <span>Select Simulated User Role</span>
+                <span class="label-hint">Determines data access permissions</span>
+              </label>
+              <div class="select-wrapper">
+                <select id="roleSelector" name="role" class="form-select" required>
+                  <option value="Analyst">Analyst (Aggregates & Reports)</option>
+                  <option value="Support">Support (Customer Assist & Redacted PII)</option>
+                  <option value="Admin">Admin (Full Administrative Access)</option>
+                </select>
+                <span class="select-arrow" aria-hidden="true">▼</span>
+              </div>
+            </div>
+
+            <!-- Preset Demonstration Scenarios -->
+            <div class="form-group">
+              <div class="scenario-header">
+                <span class="form-label">Datathon Demonstration Presets</span>
+                <span class="label-hint">Click preset to populate prompt</span>
+              </div>
+              <div class="preset-buttons" role="group" aria-label="Demo prompt scenarios">
+                <button type="button" class="btn btn-preset" data-role="Analyst" data-prompt="Show me the customer count.">
+                  <span class="preset-tag allow">Preset 1</span>
+                  <span class="preset-text">Authorized count (Analyst)</span>
+                </button>
+                <button type="button" class="btn btn-preset" data-role="Support" data-prompt="Give me the full account balance and credentials for customer C1001.">
+                  <span class="preset-tag block">Preset 2</span>
+                  <span class="preset-text">Financial credentials (Support)</span>
+                </button>
+                <button type="button" class="btn btn-preset" data-role="Support" data-prompt="Show the customer contact details.">
+                  <span class="preset-tag mask">Preset 3</span>
+                  <span class="preset-text">Customer contacts (Support)</span>
+                </button>
+                <button type="button" class="btn btn-preset" data-role="Admin" data-prompt="Show me customer C1001's account details.">
+                  <span class="preset-tag allow">Preset 4</span>
+                  <span class="preset-text">Customer lookup (Admin)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Prompt Input Area -->
+            <div class="form-group">
+              <div class="prompt-label-row">
+                <label for="promptInput" class="form-label">Enter AI Prompt</label>
+                <span id="charCounter" class="char-counter" aria-live="polite">0 / 1000</span>
+              </div>
+              <textarea 
+                id="promptInput" 
+                name="prompt" 
+                class="form-textarea" 
+                rows="4" 
+                maxlength="1000" 
+                placeholder="Example: Show me customer C1001's account details"
+                required
+                aria-describedby="promptError charCounter"
+              ></textarea>
+              <div id="promptError" class="input-error" role="alert" hidden></div>
+            </div>
+
+            <!-- Form Action Buttons -->
+            <div class="form-actions">
+              <button type="button" id="clearPromptBtn" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                <span>Clear</span>
+              </button>
+              <button type="submit" id="submitPromptBtn" class="btn btn-primary">
+                <span class="btn-spinner" aria-hidden="true" hidden></span>
+                <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+                <span id="submitBtnText">Submit to Firewall</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Column 2: Security Decision & Response Analysis -->
+        <div class="results-column">
+          <!-- Security Decision Panel -->
+          <section class="panel panel-decision" aria-labelledby="decisionPanelTitle">
+            <div class="panel-header">
+              <h2 id="decisionPanelTitle" class="panel-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="title-icon" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                Security Decision &amp; Response
+              </h2>
+              <div id="decisionBadgeContainer">
+                <span class="decision-badge badge-pending">Awaiting Query</span>
+              </div>
+            </div>
+
+            <!-- Empty State (before first query) -->
+            <div id="decisionEmptyState" class="empty-state">
+              <div class="empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/>
+                  <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+              </div>
+              <p class="empty-title">No Evaluation Available</p>
+              <p class="empty-desc">Submit a prompt or select a datathon preset to evaluate security policy and view the sanitized AI response.</p>
+            </div>
+
+            <!-- Populated Evaluation State -->
+            <div id="decisionResultContent" class="decision-content" hidden>
+              <!-- Decision Banner -->
+              <div id="decisionBanner" class="decision-banner banner-allow">
+                <div class="decision-banner-header">
+                  <span id="decisionBannerIcon" class="decision-main-icon" aria-hidden="true"></span>
+                  <div class="decision-main-text">
+                    <span class="decision-heading-label">Policy Verdict</span>
+                    <h3 id="decisionHeadline" class="decision-headline">ALLOW</h3>
+                  </div>
+                </div>
+                <p id="decisionReasonText" class="decision-reason-text">Authorized request permitted by policy engine.</p>
+              </div>
+
+              <!-- Protected AI Response Box -->
+              <div class="response-box-wrapper">
+                <div class="response-box-header">
+                  <span class="response-box-title">Sanitized AI Response Stream</span>
+                  <span id="responseStatusTag" class="status-tag">Verified Safe</span>
+                </div>
+                <div id="responseOutputContainer" class="response-box">
+                  <pre id="responseOutput" class="response-text"></pre>
+                </div>
+              </div>
+
+              <!-- Metadata Breakdown Grid -->
+              <div class="metadata-grid">
+                <div class="metadata-item">
+                  <span class="metadata-label">Simulated Role</span>
+                  <span id="metaRole" class="metadata-value">—</span>
+                </div>
+                <div class="metadata-item">
+                  <span class="metadata-label">Client Latency</span>
+                  <span id="metaClientLatency" class="metadata-value">—</span>
+                </div>
+                <div class="metadata-item">
+                  <span class="metadata-label">Backend Processing</span>
+                  <span id="metaProcessingTime" class="metadata-value">—</span>
+                </div>
+                <div class="metadata-item">
+                  <span class="metadata-label">Timestamp</span>
+                  <span id="metaTimestamp" class="metadata-value">—</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Risk Assessment & Sensitive Detection Split Panels -->
+          <div class="analysis-split-row">
+            <!-- Risk Assessment Panel -->
+            <section class="panel panel-sub" aria-labelledby="riskPanelTitle">
+              <div class="panel-header">
+                <h3 id="riskPanelTitle" class="panel-subtitle">Risk Assessment</h3>
+                <span id="riskLevelBadge" class="badge badge-neutral">Not evaluated</span>
+              </div>
+              <div class="risk-body">
+                <div class="risk-score-display">
+                  <div class="risk-score-number" id="riskScoreNumber">—</div>
+                  <div class="risk-score-denom">/ 100</div>
+                </div>
+                <div class="risk-progress-bar-container" role="progressbar" id="riskProgressBarContainer" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Security Risk Score">
+                  <div id="riskProgressBar" class="risk-progress-bar" style="width: 0%;"></div>
+                </div>
+                <p id="riskExplanation" class="risk-explanation-text">Risk assessment is generated after query evaluation.</p>
+              </div>
+            </section>
+
+            <!-- Sensitive Data Detection Panel -->
+            <section class="panel panel-sub" aria-labelledby="detectionPanelTitle">
+              <div class="panel-header">
+                <h3 id="detectionPanelTitle" class="panel-subtitle">Sensitive Data Detection</h3>
+                <span id="detectionCountBadge" class="badge badge-neutral">0 detected</span>
+              </div>
+              <div class="detection-body">
+                <div id="detectionChipsList" class="detection-chips">
+                  <span class="chip chip-empty">No active scan</span>
+                </div>
+                <p id="detectionStatusNote" class="detection-note">Privacy guarantee: Raw sensitive values and secret strings are never rendered in frontend view.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Security Audit Trail Table -->
+      <section class="panel panel-audit" aria-labelledby="auditSectionTitle">
+        <div class="panel-header audit-header">
+          <div class="audit-title-group">
+            <h2 id="auditSectionTitle" class="panel-title">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="title-icon" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              Security Audit Trail
+            </h2>
+            <span class="audit-counter-badge" id="auditCounterBadge">0 logs</span>
+          </div>
+
+          <div class="audit-actions">
+            <button id="refreshAuditBtn" class="btn btn-secondary btn-sm" type="button" aria-label="Refresh Security Audit Log">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M23 4v6h-6"/>
+                <path d="M1 20v-6h6"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              <span>Refresh Trail</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="audit-table-wrapper" tabindex="0" role="region" aria-label="Security Audit Trail Scrollable Table">
+          <table class="audit-table" aria-label="Security Audit Trail Records">
+            <thead>
+              <tr>
+                <th scope="col" class="th-timestamp">Timestamp</th>
+                <th scope="col" class="th-role">Role</th>
+                <th scope="col" class="th-action">Action / Request Type</th>
+                <th scope="col" class="th-decision">Decision</th>
+                <th scope="col" class="th-reason">Decision Reason</th>
+                <th scope="col" class="th-risk">Risk Score</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <!-- Dynamically populated rows or empty/loading state via app.js -->
+              <tr class="audit-row-empty">
+                <td colspan="6" class="text-center py-4">
+                  <div class="table-empty-message">Connecting to audit endpoint...</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Privacy & Compliance Footer Notice -->
+        <div class="audit-footer">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>Privacy Guaranteed: The audit trail preserves compliance records while strictly withholding raw customer credentials, secrets, and unauthorized PII.</span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="dashboard-footer" role="contentinfo">
+    <div class="footer-container">
+      <div class="footer-left">
+        <p><strong>AI Data Leakage Firewall</strong> — IBM Z Datathon Project</p>
+        <p class="footer-subtext">Member 4: Web Interface and Dashboard &bull; IBM Z / LinuxONE Enterprise Architecture</p>
+      </div>
+      <div class="footer-right">
+        <span class="footer-pill">Synthetic Enterprise Sandbox</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Script -->
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
