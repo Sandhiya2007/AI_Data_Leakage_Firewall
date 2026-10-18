@@ -1,9 +1,4 @@
-venv/
-.venv/
 __pycache__/
-*.pyc
-*.db
-*.db-shm
-*.db-wal
-.env
-
+*.py[cod]
+.venv/
+venv/
